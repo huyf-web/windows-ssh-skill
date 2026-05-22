@@ -1,0 +1,6 @@
+.codex_tmp/
+*.log
+*.tmp
+*_key
+*_key.pub
+codex_net.txt

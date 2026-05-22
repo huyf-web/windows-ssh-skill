@@ -1,0 +1,4 @@
+interface:
+  display_name: "VMware SSH Connect"
+  short_description: "Connect to VMware Linux guests over SSH from Windows."
+  default_prompt: "Use $vmware-ssh-connect to discover a running VMware VM, bring up networking, and verify SSH access."
