@@ -5,6 +5,32 @@ description: 从 Windows 宿主机通过 SSH 连接正在运行的 VMware Workst
 
 # VMware SSH Connect
 
+## Preflight Debug Log Review
+
+Before attempting a new VMware SSH connection, first inspect the latest Markdown files under `docs/debug-notes/`.
+
+Use these notes as the first troubleshooting branch when the symptoms match. In particular, read `docs/debug-notes/2026-06-06-ic-eda-nat-dhcp-ssh.md` before debugging any case where:
+
+- `vmrun -T ws getGuestIPAddress "<vmx>"` cannot return an IP.
+- The guest NIC, such as `ens33`, reports `NO-CARRIER`, unavailable, or no IPv4 address.
+- `vmrun connectNamedDevice` appears to succeed but the guest does not show a new link-up event.
+- SSH reaches the guest but public-key authentication fails after copying a key.
+
+For NAT guests, check host VMware services before spending time inside the guest:
+
+```powershell
+Get-Service -Name VMnetDHCP,'VMware NAT Service'
+```
+
+If either service is stopped, start it from elevated PowerShell:
+
+```powershell
+Start-Service -Name VMnetDHCP
+Start-Service -Name 'VMware NAT Service'
+```
+
+When installing SSH keys from Windows through `vmrun`, avoid long inline guest shell commands that contain `$()` or other shell expansion syntax. Prefer copying a short guest-side script to `/tmp` and running it with `/bin/bash`.
+
 当虚拟机在 VMware 中已经启动，但普通的 `ssh user@ip` 还连不上时，使用这个 skill 从 Windows 宿主机建立到 VMware Linux guest 的 SSH 连接。
 
 ## 工作流程

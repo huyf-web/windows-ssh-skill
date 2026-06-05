@@ -12,6 +12,41 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+function Show-DebugNotes {
+    $skillRoot = Split-Path -Parent $PSScriptRoot
+    $debugDir = Join-Path $skillRoot "docs\debug-notes"
+    if (-not (Test-Path -LiteralPath $debugDir)) {
+        return
+    }
+
+    $latest = Get-ChildItem -LiteralPath $debugDir -Filter "*.md" -File |
+        Sort-Object LastWriteTime -Descending |
+        Select-Object -First 1
+    if (-not $latest) {
+        return
+    }
+
+    Write-Host "Preflight debug note: $($latest.FullName)"
+    Write-Host "Read this note before connecting when NAT/DHCP, NO-CARRIER, or SSH key auth fails."
+}
+
+function Show-HostNetworkServices {
+    $services = Get-Service -Name "VMnetDHCP", "VMware NAT Service" -ErrorAction SilentlyContinue
+    if (-not $services) {
+        Write-Warning "VMware NAT/DHCP services were not found on this host."
+        return
+    }
+
+    Write-Host "VMware host network services:"
+    $services | Select-Object Name, Status, DisplayName | Format-Table -AutoSize | Out-String | Write-Host
+
+    $stopped = @($services | Where-Object { $_.Status -ne "Running" })
+    if ($stopped.Count -gt 0) {
+        Write-Warning "One or more VMware NAT/DHCP services are not running. Start them before debugging guest SSH/IP issues."
+        Write-Warning "Elevated PowerShell: Start-Service -Name VMnetDHCP; Start-Service -Name 'VMware NAT Service'"
+    }
+}
+
 function Invoke-Vmrun {
     param([string[]]$Args)
     & $VmrunPath @Args
@@ -23,6 +58,9 @@ function Invoke-Vmrun {
 if (-not (Test-Path -LiteralPath $VmrunPath)) {
     throw "vmrun not found: $VmrunPath"
 }
+
+Show-DebugNotes
+Show-HostNetworkServices
 
 if (-not $VmxPath) {
     $running = & $VmrunPath list
